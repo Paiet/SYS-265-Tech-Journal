@@ -1,0 +1,74 @@
+Open NMS
+
+Open NMS is an open source network monitoring 
+tool that allows you to interactively see the 
+health and status of your netowrk.
+
+Step 1: Create service stack for PostgreSQL and OpenNMS Horizon
+$mkdir opennms-horizon
+$cd opennms-horizon
+$nano docker-compose.yml
+type text from box in nano file (you can also copy and paste becuase it way simpler)
+              ---
+              version: '3'
+
+              volumes:
+                data-postgres: {}
+                data-opennms: {}
+
+              services:
+                database:
+                  image: postgres:12
+                  container_name: database
+                  environment:
+                    - TZ=Europe/Berlin
+                    - POSTGRES_USER=postgres
+                    - POSTGRES_PASSWORD=postgres
+                  volumes:
+                    - data-postgres:/var/lib/postgresql/data
+                  healthcheck:
+                    test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+                    interval: 10s
+                    timeout: 30s
+                    retries: 3
+
+                horizon:
+                  image: opennms/horizon:27.1.0
+                  container_name: horizon
+                  environment:
+                    - TZ=Europe/Berlin
+                    - POSTGRES_HOST=database
+                    - POSTGRES_PORT=5432
+                    - POSTGRES_USER=postgres
+                    - POSTGRES_PASSWORD=postgres
+                    - OPENNMS_DBNAME=opennms
+                    - OPENNMS_DBUSER=opennms
+                    - OPENNMS_DBPASS=opennms
+                  volumes:
+                    - data-opennms:/opt/opennms/share/rrd
+                    - ./overlay:/opt/opennms-overlay
+                  command: ["-s"]
+                  ports:
+                    - "8980:8980/tcp"
+                    - "8101:8101/tcp"
+                    - "61616:61616/tcp"
+                  healthcheck:
+                    test: [ "CMD", "curl", "-f", "-I", "http://localhost:8980/opennms/login.jsp" ]
+                    interval: 1m
+                    timeout: 5s
+                    retries: 3
+
+Step 2: Start the service stack
+$cd opennms-horizon
+$docker-compose up -d
+$sudo ufw allow 8980/tcp
+$sudo ufw allow 8101/tcp
+$sudo ufw allow 61616/tcp
+$sudo ufw reload
+$sudo ufw status
+
+Step 3: Log in to the Web UI
+go to internet
+http://docker01-nicholas:8980
+
+https://docs.opennms.org/opennms/releases/latest/guide-install/guide-install.html#_run_with_docker
