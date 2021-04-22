@@ -1,1 +1,28 @@
+FROM Rocker on our ubuntu machine
 
+RUN apt-get update -y;
+RUN apt-get install curl -y;
+RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -;
+RUN apt-get install nodejs -y;
+
+COPY index.js /app/index.js
+COPY package.json /app/package.json
+WORKDIR /app
+RUN npm install 
+CMD ["node", "index.js"]
+
+{
+  "name": "simple_app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.15.2"
+  }
+}
