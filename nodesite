@@ -1,4 +1,4 @@
-FROM Rocker on our ubuntu machine
+FROM Docker on our ubuntu machine
 
 RUN apt-get update -y;
 RUN apt-get install curl -y;
@@ -10,6 +10,17 @@ COPY package.json /app/package.json
 WORKDIR /app
 RUN npm install 
 CMD ["node", "index.js"]
+
+FROM /node:base
+
+COPY index.js /app/index.js
+COPY package.json /app/package.json
+COPY data.json /app/data.json
+WORKDIR /app
+RUN npm install
+
+ENTRYPOINT ["node"]
+CMD ["index.js"]
 
 {
   "name": "simple_app",
