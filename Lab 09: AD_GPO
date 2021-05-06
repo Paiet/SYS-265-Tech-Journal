@@ -1,0 +1,88 @@
+repare an OU, user & workstation
+Before we get into configuring a Group Policy Object (GPO) within Active Directory (AD), let’s set the AD stage to deploy a software package. Via AD Users & Computers, create a Test OU.
+Open MGMT01
+Make sure FW01, AD01, WKS01 is turned on
+On MGMT01, click tools and select Active Directory Users and Computers
+  Right click on nicholas.local
+  Select New
+  Select Organizational Unit, name it Test OU
+  Right click on Test OU
+  Select new
+  Select User, name it nicholas
+  Click on Computers
+  Right click on WKS01-NICHOLAS
+  Select move, move to Test OU folder
+For some fun … use Powershell on AD01 via MGMT01 to figure out how to create another OU called “Software Deploy”, move WKS01 and your regular named account into it, and then delete the Test OU.
+Open AD01
+$powershell (opens powershell)
+$New-ADOrganizationalUnit -Name "Software Deploy"
+$Move-ADObject -Identity "CN=WKS01-NICHOLAS,OU=Test OU,DC=nicholas,DC=local" --TargetPath "OU=Software Deploy,DC=sarah,DC=local"
+$Get-ADOrganizationalUnit -Identity "OU=Test OU,DC=nicholas,DC=local" | Set-ADObject -ProtectedFromAccidentalDeletion:$false -PassThru | Remove-ADOrganizationalUnit -Confirm:$false
+https://petri.com/creating-active-directory-ous-powershell
+https://blog.netwrix.com/2018/06/26/managing-ous-and-moving-their-objects-with-powershell/
+
+Deploying Software via GPO
+One popular GPO feature is deploying software across an AD domain.
+On MGMT01, download Putty’s x64-bit Windows Installer Package (uses the .msi file extension). 
+Next, create a Share on MGMT01 named ‘Software’ and place Putty’s .msi in it, so users and computers (via GPO) can access & install it.
+Go to MGMT01,
+Click Files and Storage Services
+  Select Shares
+  Right click on mgmt01 and select New Share
+   New Share Wizard
+    Select Profile: SMB Share - Quick, next
+    Share Locations: mgmt01, next
+    Share Name: Software, next
+    Authentification: next
+    Share Permissions: next
+    Permissions: next
+  Right click on the Software share under MGMT01
+  Select Open Shares
+    Right click address bar and select copy address  
+Openweb browser, Type putty chiark in search bar, open first link
+Download Putty’s x64-bit Windows Installer Package (uses the .msi file extension).
+Click save as and paste addrress in search bar (or type \\mgmt01-nicholas.nicholas.local\Software) and press enter
+Reopen share to make sure its there 
+
+Deliverable 2.  Screenshot showing WKS01 under regular named account, do a quick test of the new Share on MGMT under your regular named account on WKS01 displaying regular account, hostname & share with Putty’s .msi in it, as below:
+Log on to WKS01 as nicholas (the user made in deliverable 1)
+open command prompt
+$whoami
+$hostname
+On WKS01, open File Explorer and type the following addrress in search bar (\\mgmt01-nicholas.nicholas.local\Software)
+
+Via Group Policy Management feature on MGMT (You may need to install this), create a new GPO named ‘Deploy SW’ within the Software Deploy OU.
+  Go back to MGMT01
+  Click Tools
+    Select Group Policy Management
+    Right click on Software Deploy 
+    Select Create New GPO, name it Deploy SW
+Edit the new GPO by creating a new Software installation, and assign Putty’s .msi package to deploy.
+  Right click on Delploy SW
+  Select Edit
+  Click Policies and Software setting carrots
+  Right Click on Software Installation and click new, click package
+  Type the following addrress in search bar (\\mgmt01-nicholas.nicholas.local\Software) and click enter
+  Select the putty installer and click open
+  Click assigned and click ok
+With the new GPO setting, run “gpupdate /force” on WKS01, and then allow the restart when prompted. As always, read the message MS provides to understand why.
+Go to WKS01, and open command prompt
+$gpupdate /force
+  gpudate didn't work, problem with syncronized clocks: use the following command to fix
+  go to AD01, type sconfig, changed/synchronized clocks
+  
+Log on WKS01 under your regular named account (nicholas account), and voila ... your new GPO installed Putty.
+just type putty in search bar to see if it is installed
+
+Deliverable 3:  
+One screenshot of Event Viewer using the GUI displaying the only single System information event log from the source Application Management Group Policy which validates “The install of application PuTTY release 0.74 (64-bit) from policy Deploy SW succeeded” on WKS01.
+  On WKS01
+  Type Event Viewer in search bar and open
+  Click the carrot on Windows Logs
+  Select system
+  Use the Find tool to search for putty
+One screenshot of Powershell displaying the only single System information event log from source Application Management Group Policy which validates “The install of application PuTTY release 0.74 (64-bit) from policy Deploy SW succeeded” on WKS01. 
+  On WKS01
+  Open powershell
+  $Get-EventLog -LogName System | Where-Object {$_.EventID -eq 302}
+https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-eventlog?view=powershell-5.1
